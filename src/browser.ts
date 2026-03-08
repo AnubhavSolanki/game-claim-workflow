@@ -29,6 +29,16 @@ function findChromeExecutable(): string | undefined {
   return undefined;
 }
 
+function cleanStaleLock(userDataDir: string): void {
+  const lockFile = `${userDataDir}/SingletonLock`;
+  try {
+    fs.unlinkSync(lockFile);
+    console.log("[Browser] Removed stale SingletonLock from previous crash");
+  } catch {
+    // No lock file, all good
+  }
+}
+
 export async function launchBrowser(): Promise<{ browser: Browser; page: Page }> {
   const executablePath = findChromeExecutable();
   if (executablePath) {
@@ -36,6 +46,8 @@ export async function launchBrowser(): Promise<{ browser: Browser; page: Page }>
   } else {
     console.log("[Browser] Using Puppeteer's bundled Chromium (set CHROME_EXECUTABLE_PATH for real Chrome)");
   }
+
+  cleanStaleLock(config.chrome.userDataDir);
 
   const browser = await puppeteer.launch({
     headless: config.chrome.headless,
