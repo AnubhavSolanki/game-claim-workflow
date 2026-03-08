@@ -7,6 +7,7 @@ export const config = {
   chrome: {
     userDataDir: path.resolve(process.env.CHROME_USER_DATA_DIR || "./chrome-data"),
     headless: process.env.HEADLESS === "true",
+    executablePath: process.env.CHROME_EXECUTABLE_PATH || "",
   },
   platforms: {
     amazon: process.env.ENABLE_AMAZON !== "false",
