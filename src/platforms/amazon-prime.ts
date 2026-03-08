@@ -1,5 +1,5 @@
 import type { Page } from "puppeteer";
-import { waitAndClick, elementExists, delay, retry, takeScreenshot, navigateTo } from "../utils.js";
+import { waitAndClick, elementExists, delay, retry, takeScreenshot, navigateTo, waitForLogin } from "../utils.js";
 import { notifySuccess, notifyError, notifySkip, type ClaimResult } from "../notify.js";
 import { claimGog } from "./gog.js";
 import { claimLegacyGame } from "./legacy-games.js";
@@ -10,6 +10,8 @@ const SELECTORS = {
   claimButtonGamePage: "button.tw-button",
   collectedButton: `(//div[@id="offer-section-FGWP_FULL"]//div[contains(@class, "item-card__action")])[1]//p[text()="Collected"]`,
   freeTab: `id("SearchBar")/DIV[1]/DIV[1]/DIV[1]/DIV[2]/BUTTON[1]/DIV[1]/DIV[1]/P[1]`,
+  // Login detection — the avatar/account dropdown only shows when logged in
+  loggedInIndicator: `[data-a-target="user-dropdown-first-name-text"]`,
   gogIndicator: `//*[contains(text(), 'GOG')]`,
   legacyIndicator: `//*[text()='Legacy Games']`,
   xboxIndicator: `//*[contains(text(), 'Xbox')]`,
@@ -21,6 +23,22 @@ export async function claimAmazonPrimeGames(page: Page): Promise<ClaimResult> {
   try {
     await navigateTo(page, "https://gaming.amazon.com/home");
     console.log("[Amazon] Opened Prime Gaming homepage");
+
+    // Check if logged in
+    const isLoggedIn = await elementExists(page, SELECTORS.loggedInIndicator, { timeout: 5000 });
+    if (!isLoggedIn) {
+      try {
+        await waitForLogin(page, SELECTORS.loggedInIndicator, {
+          timeout: 120000,
+          platform: "Amazon Prime",
+        });
+      } catch (error) {
+        await notifyError("Amazon Prime", "login check", error, await takeScreenshot(page));
+        result.errors.push("Not logged in");
+        return result;
+      }
+    }
+    console.log("[Amazon] Logged in confirmed");
 
     // Click "Free" tab
     try {
@@ -75,7 +93,26 @@ export async function claimAmazonPrimeGames(page: Page): Promise<ClaimResult> {
         );
         console.log("[Amazon] Clicked claim on game page");
 
-        await delay(2000);
+        await delay(3000);
+
+        // Verify claim succeeded — the URL should change or a success indicator should appear
+        const currentUrl = page.url();
+        const claimVerified =
+          currentUrl.includes("/dp/") ||
+          (await elementExists(page, `//*[contains(text(), 'Claimed')]`, { xpath: true, timeout: 3000 })) ||
+          (await elementExists(page, `//*[contains(text(), 'claimed')]`, { xpath: true, timeout: 1000 })) ||
+          (await elementExists(page, `//*[contains(text(), 'success')]`, { xpath: true, timeout: 1000 }));
+
+        if (!claimVerified) {
+          console.log(`[Amazon] Claim verification uncertain for iteration ${iteration} — page may not have responded`);
+          result.errors.push(`Game ${iteration} claim unverified`);
+          await notifyError("Amazon Prime", `claim verification for game ${iteration}`, new Error("Could not verify claim succeeded — no confirmation found"), await takeScreenshot(page));
+          await navigateTo(page, "https://gaming.amazon.com/home");
+          await delay(1000);
+          continue;
+        }
+
+        console.log(`[Amazon] Claim verified for iteration ${iteration}`);
 
         // Check for GOG game
         const isGog = await elementExists(page, SELECTORS.gogIndicator, { xpath: true, timeout: 1000 });

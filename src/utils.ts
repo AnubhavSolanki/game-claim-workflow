@@ -147,3 +147,34 @@ export async function takeScreenshot(page: Page): Promise<string> {
 export async function navigateTo(page: Page, url: string): Promise<void> {
   await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 }
+
+/**
+ * Wait for the user to log in manually.
+ * Polls for a logged-in indicator element. If not found within the timeout,
+ * throws an error.
+ */
+export async function waitForLogin(
+  page: Page,
+  loggedInSelector: string,
+  options: { timeout?: number; xpath?: boolean; platform?: string } = {}
+): Promise<void> {
+  const { timeout = 120000, xpath = false, platform = "Platform" } = options;
+  const pollInterval = 3000;
+  const maxAttempts = Math.ceil(timeout / pollInterval);
+
+  console.log(`\n${"!".repeat(60)}`);
+  console.log(`[${platform}] Not logged in! Please log in manually in the browser.`);
+  console.log(`[${platform}] Waiting up to ${timeout / 1000} seconds for login...`);
+  console.log(`${"!".repeat(60)}\n`);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const isLoggedIn = await elementExists(page, loggedInSelector, { timeout: 1000, xpath });
+    if (isLoggedIn) {
+      console.log(`[${platform}] Login detected! Continuing...`);
+      return;
+    }
+    await delay(pollInterval);
+  }
+
+  throw new Error(`[${platform}] Login timeout — not logged in after ${timeout / 1000}s`);
+}
