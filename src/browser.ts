@@ -1,3 +1,4 @@
+import fs from "fs";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import type { Browser, Page } from "puppeteer";
@@ -6,8 +7,8 @@ import { config } from "./config.js";
 puppeteer.use(StealthPlugin());
 
 function findChromeExecutable(): string | undefined {
-  const path = config.chrome.executablePath;
-  if (path) return path;
+  const envPath = config.chrome.executablePath;
+  if (envPath) return envPath;
 
   // Auto-detect Chrome on macOS
   const macPaths = [
@@ -18,7 +19,7 @@ function findChromeExecutable(): string | undefined {
 
   for (const p of macPaths) {
     try {
-      require("fs").accessSync(p);
+      fs.accessSync(p);
       return p;
     } catch {
       // not found, try next
