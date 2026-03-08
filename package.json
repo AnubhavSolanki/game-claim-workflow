@@ -1,0 +1,33 @@
+{
+  "name": "game-claim-workflow",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Automated free game claimer for Amazon Prime Gaming, Epic Games Store, GOG, Legacy Games, and Xbox",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "start:once": "tsx src/index.ts --once",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts --once"
+  },
+  "keywords": [
+    "puppeteer",
+    "automation",
+    "game-claimer",
+    "prime-gaming",
+    "epic-games"
+  ],
+  "author": "AnubhavSolanki",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "node-cron": "^4.2.1",
+    "puppeteer": "^24.38.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
